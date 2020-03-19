@@ -2,14 +2,13 @@ from __future__ import absolute_import
 import time
 import json
 import functools
+import six
 import textwrap
 from datetime import datetime
-from django.utils.six.moves.urllib.parse import urlparse
 
 from django import forms
 from django.contrib import messages
 from django.contrib.admin.models import LogEntry, ADDITION
-import six
 from django.contrib.admin.utils import unquote
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
@@ -21,6 +20,7 @@ from django.utils.encoding import force_text
 from django.utils.html import escape
 from django.utils.safestring import mark_safe
 from django.utils.translation import ugettext as _
+from six.moves.urllib.parse import urlparse
 
 
 class AdminAutoSaveMixin(object):
@@ -65,6 +65,11 @@ class AdminAutoSaveMixin(object):
         updated = None
 
         # Raise exception if the admin doesn't have a 'autosave_last_modified_field' property
+        """
+            SOURCEDIVE NOTES
+            Should probably add an exception here if 'autosave_last_modified_field' is
+            spelled wrong or not a field
+        """
         if not self.autosave_last_modified_field:
             raise ImproperlyConfigured((
                 u"Autosave is not configured correctly. %(cls_name)s "
@@ -109,7 +114,11 @@ class AdminAutoSaveMixin(object):
             raise PermissionDenied
         elif not obj and not self.has_add_permission(request):
             raise PermissionDenied
-
+        """
+            SOURCEDIVE NOTES
+            After minimal investigating. The is_recoveded_autosave appears seems to be false
+            when it is not suppose to be
+        """
         js_vars = {
             'autosave_url': autosave_url,
             'is_add_view': not(object_id),
@@ -158,7 +167,6 @@ class AdminAutoSaveMixin(object):
     def autosave_media(self, obj=None, get_params=''):
         """
         Provides a Media object containing autosave-related javascript files.
-
         This can be appended to the media in add_view and change_view, and
         enables us to pull autosave information specific to a given object.
         """
@@ -166,10 +174,9 @@ class AdminAutoSaveMixin(object):
         info = (opts.app_label, getattr(opts, 'model_name', None) or getattr(opts, 'module_name', None))
 
         pk = getattr(obj, 'pk', None) or 0
-
         return forms.Media(js=(
             reverse('admin:%s_%s_autosave_js' % info, args=[pk]) + get_params,
-            "autosave/js/autosave.js?v=3",
+            "autosave/js/autosave.js",
         ))
 
     def set_autosave_flag(self, request, response):
